@@ -1,0 +1,8 @@
+{
+    "DIRS": {
+        "BASE": "DIRNAME/..",
+        "LOGS": "BASE/logs",
+        "DATA": "BASE/data",
+        "CONF": "BASE/conf"
+    }
+}

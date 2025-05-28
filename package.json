@@ -1,0 +1,24 @@
+{
+  "name": "acep-rvb-score-keeper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type":"module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acep-uaf/acep-rvb-score-keeper.git"
+  },
+  "author": "John Haverlack (jehaverlack@alaska.edu)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/acep-uaf/acep-rvb-score-keeper/issues"
+  },
+  "homepage": "https://github.com/acep-uaf/acep-rvb-score-keeper#readme",
+  "description": "Integration using NextCloud Deck Plugin API to keep score for Card completed",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "yargs": "^17.7.2"
+  }
+}

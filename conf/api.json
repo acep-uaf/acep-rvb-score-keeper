@@ -1,0 +1,6 @@
+{
+    "QUERIES":{
+        "METADATA":"HTPROTOCOL://NC_SERVER/index.php/apps/deck/api/v1.0/boards/BOARD_ID",
+        "STACKS":"HTPROTOCOL://NC_SERVER/index.php/apps/deck/api/v1.0/boards/BOARD_ID/stacks"
+    }
+}
