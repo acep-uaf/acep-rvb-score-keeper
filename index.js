@@ -3,6 +3,8 @@
 // https://github.com/acep-uaf/acep-rvb-score-keeper
 // index.js
 
+import fs from 'fs';
+import path from 'path';
 import { load_config, logger } from './libs/arsk-lib.js';
 import https from 'https';
 import fetch from 'node-fetch';
@@ -109,10 +111,29 @@ let competition = {};
 competition.NAME = config.NAME;
 competition.TITLE = metadata.title;
 competition.DESCRIPTION = config.DESCRIPTION;
+competition.START = config.START_TS;
+competition.END = config.END_TS;
+
+// If the competition has not started, set the status to "PENDING"
+// If the competition has ended, set the status to "COMPLETED"
+// if the competition is in progress, set the status to "ACTIVE"
+// START_TS and END_TS use format:  2025-05-27T00:00:00.000Z
+
+let now = new Date().toISOString();
+
+if (now < config.START_TS) {
+    competition.STATUS = "PENDING";
+} else if (now > config.END_TS) {
+    competition.STATUS = "COMPLETED";
+} else {
+    competition.STATUS = "ACTIVE";
+}
+
 competition.OWNER = metadata.owner.primaryKey;
 competition.TOTAL_POINTS = 0;
 competition.ASSIGNED_POINTS = 0;
 competition.AWARDED_POINTS = 0;
+
 
 competition.scores = {}
 competition.labels = {}
@@ -204,4 +225,45 @@ for (let s in stacks) {
     }
 }
 
-logger(`Competition: ${JSON.stringify(competition, null, 2)}`, true);
+logger(`Competition: ${JSON.stringify(competition, null, 2)}`, false);
+
+printPointsTable(competition.stacks);
+
+try {
+    fs.writeFileSync(path.join(config.DIRS.DATA,`${config.NAME}.json`), JSON.stringify(competition, null, 2));
+} catch (err) {
+    logger(`Error: ${err}`, true);
+}
+
+
+// ##########################################################
+function printPointsTable(comp) {
+    // Get list of all usernames from any stack
+    let users = Object.keys(Object.values(comp)[0].points_assigned);
+
+    // Header
+    let header = ['Stack', 'Total Points', ...users];
+    let rows = [];
+
+    for (let stackName in comp) {
+        let stack = comp[stackName];
+        let row = [
+            stack.title.padEnd(10),
+            String(stack.points_total).padStart(12)
+        ];
+
+        for (let user of users) {
+            row.push(String(stack.points_assigned[user]).padStart(10));
+        }
+
+        rows.push(row);
+    }
+
+    // Print
+    console.log(header.map(h => h.padStart(10)).join(' | '));
+    console.log('-'.repeat(header.length * 13));
+
+    for (let row of rows) {
+        console.log(row.join(' | '));
+    }
+}

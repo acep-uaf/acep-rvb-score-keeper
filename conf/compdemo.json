@@ -1,7 +1,9 @@
 {
     "NAME": "compdemo",
-    "DESCRIPTION": "Demo Competition",
+    "DESCRIPTION": "Demo Competition Score Board",
     "NC_DECK_BOARD_URL": "https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/3",
+    "START_TS": "2025-05-27T00:00:00.000Z",
+    "END_TS": "2025-05-30T23:59:59.999Z",
     "IGNORE_SSL_VALIDATION": true,
     "INCLUDES" : [
         "config.json",
