@@ -4,5 +4,10 @@
         "LOGS": "BASE/logs",
         "DATA": "BASE/data",
         "CONF": "BASE/conf"
+    },
+    "MQTT": {
+        "HOST": "infosec.acep.uaf.edu",
+        "PORT": 1883,
+        "TOPIC": "leaderboard"
     }
 }

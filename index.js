@@ -8,6 +8,7 @@ import path from 'path';
 import { load_config, logger } from './libs/arsk-lib.js';
 import https from 'https';
 import fetch from 'node-fetch';
+import mqtt from 'mqtt';
 
 let config = load_config();
 
@@ -102,7 +103,7 @@ if (response.ok) {
     logger(`Error: ${response.status} ${response.statusText}`, true);
 }
 
-// logger(`Stacks: ${JSON.stringify(stacks, null, 2)}`);
+logger(`Stacks: ${JSON.stringify(stacks, null, 2)}`);
 
 
 // Aggregate Metadata and Stacks for Scoring
@@ -113,6 +114,7 @@ competition.TITLE = metadata.title;
 competition.DESCRIPTION = config.DESCRIPTION;
 competition.START = config.START_TS;
 competition.END = config.END_TS;
+competition.ENABLED = config.ENABLED;
 
 // If the competition has not started, set the status to "PENDING"
 // If the competition has ended, set the status to "COMPLETED"
@@ -229,11 +231,44 @@ logger(`Competition: ${JSON.stringify(competition, null, 2)}`, false);
 
 printPointsTable(competition.stacks);
 
+// Write to file
 try {
     fs.writeFileSync(path.join(config.DIRS.DATA,`${config.NAME}.json`), JSON.stringify(competition, null, 2));
 } catch (err) {
     logger(`Error: ${err}`, true);
 }
+
+// Publish to MQTT Broker
+// Construct MQTT URL
+const mqttUrl = `mqtt://${config.MQTT.HOST}:${config.MQTT.PORT}`;
+const topic = `${config.MQTT.TOPIC}`;
+
+// Initialize MQTT client
+const mqttClient = mqtt.connect(mqttUrl, {
+  clientId: `pub-${config.NAME}-${Math.random().toString(16).substr(2, 8)}`,
+  clean: true,
+  connectTimeout: 4000,
+  reconnectPeriod: 1000
+});
+
+
+mqttClient.on('connect', () => {
+    logger(`Connected to MQTT at ${mqttUrl}`, false);
+  
+    mqttClient.publish(topic, JSON.stringify(competition), { qos: 1, retain: true }, (err) => {
+      if (err) {
+        logger(`MQTT publish error: ${err.message}`, true);
+      } else {
+        logger(`MQTT message published to ${topic}`, false);
+      }
+  
+      mqttClient.end(); // Optional: Close if this is a one-shot publisher
+    });
+  });
+  
+  mqttClient.on('error', (err) => {
+    logger(`MQTT client error: ${err.message}`, true);
+  });
 
 
 // ##########################################################
