@@ -209,17 +209,21 @@ for (let s in stacks) {
                 competition.stacks[stack].points_total += competition.scores[card.labels[l].title].points
             }
 
-                    // Get Card Owners
+            // Get Card Owners
             // console.log(JSON.stringify(competition.roles.players, null, 2))
             // console.log(JSON.stringify(card.assignedUsers, null, 2))
+            // console.log(JSON.stringify(competition, null, 2))
             for (let o in card.assignedUsers) {
                 // competition.roles.players is an array.
-                if (competition.roles.players.includes(card.assignedUsers[o].participant.primaryKey)) {
-                    competition.ASSIGNED_POINTS += competition.scores[card.labels[l].title].points
-                    if (stack == "Awarded") {
-                        competition.AWARDED_POINTS += competition.scores[card.labels[l].title].points
-                    }
-                    competition.stacks[stack].points_assigned[card.assignedUsers[o].participant.primaryKey] += competition.scores[card.labels[l].title].points
+                // console.log("DEBUG: " + card.labels[l].title)
+                if (competition.scores.hasOwnProperty(card.labels[l].title)) {
+                    if (competition.roles.players.includes(card.assignedUsers[o].participant.primaryKey)) {
+                        competition.ASSIGNED_POINTS += competition.scores[card.labels[l].title].points
+                        if (stack == "Awarded") {
+                            competition.AWARDED_POINTS += competition.scores[card.labels[l].title].points
+                        }
+                        competition.stacks[stack].points_assigned[card.assignedUsers[o].participant.primaryKey] += competition.scores[card.labels[l].title].points
+                    }    
                 }
             }
 

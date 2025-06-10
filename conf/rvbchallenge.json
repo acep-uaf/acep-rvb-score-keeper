@@ -1,0 +1,14 @@
+{
+    "NAME": "rvbchallenge",
+    "DESCRIPTION": "Red vs Blue Challenge",
+    "NC_DECK_BOARD_URL": "https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/7",
+    "START_TS": "2025-06-16T00:00:00.000Z",
+    "END_TS": "2025-06-27T23:59:59.999Z",
+    "ENABLED": false,
+    "IGNORE_SSL_VALIDATION": true,
+    "INCLUDES" : [
+        "config.json",
+        "api.json",
+        "../secrets/credentials.json"
+    ]
+}
