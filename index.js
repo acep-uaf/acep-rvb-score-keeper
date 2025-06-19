@@ -238,10 +238,10 @@ for (let t in stacks) { // Teams
 
     for (let s in stacks[t]) { // Stacks
         // competition.SCORES.TEAMS[t][stacks[t][s].title] = 0
-        if (! competition.SCORES.TEAMS.hasOwnProperty(s)) {
-            competition.SCORES.TEAMS[s] = {}
+        if (! competition.SCORES.TEAMS.hasOwnProperty(stacks[t][s].title)) {
+            competition.SCORES.TEAMS[ stacks[t][s].title ] = {}
         }
-        competition.SCORES.TEAMS[s][t] = 0
+        competition.SCORES.TEAMS[ stacks[t][s].title ][t] = 0
 
         if (! competition.SCORES.PLAYERS.hasOwnProperty(stacks[t][s].title)) {
             competition.SCORES.PLAYERS[stacks[t][s].title] = {}
@@ -256,7 +256,7 @@ for (let t in stacks) { // Teams
                 if (competition.POINTSMAP.hasOwnProperty(stacks[t][s].cards[c].labels[l]['title'])) {
                     competition.SCORES.TOTALS[stacks[t][s].title] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
                     // competition.SCORES.TEAMS[t][stacks[t][s].title] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
-                    competition.SCORES.TEAMS[s][t] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+                    competition.SCORES.TEAMS[stacks[t][s].title][t] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
 
                     // Players
                     for (let a in stacks[t][s].cards[c].assignedUsers) {
