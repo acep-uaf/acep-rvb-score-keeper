@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 const config = load_config();
 
+
 function load_config() {
     let config = {};
 
@@ -47,37 +48,72 @@ function load_config() {
         }
     }
 
-
-    // Expand Data Directory
-    let search_replace = {}
-    search_replace['DIRNAME'] = __dirname
-    for (let d in config.DIRS) {
-        search_replace[d.toUpperCase()] = d
+    if (!config.hasOwnProperty('TYPE')) {
+        config.TYPE = 'OPEN'
     }
 
-    for (let d in config.DIRS) {
-        for (let s in search_replace) {
-        switch (s) {
-            case 'DIRNAME':
-            config.DIRS[d] = path.join(config.DIRS[d].replace(s, __dirname))
+    switch (config.TYPE) {
+        case 'OPEN':
+            config.TYPE = 'OPEN'
+            config = load_config_default(config);
             break
-            default:
-            config.DIRS[d] = path.join(config.DIRS[d].replace(s, config.DIRS[search_replace[s]]))
+        case 'MULTI-TEAM':
+            config.TYPE = 'MULTI-TEAM'
+            config = load_config_multiteam(config);
             break
-        }
-        }
+        default:
+            console.error(`Unknown BOARD TYPE: ${config.TYPE}`);
+            process.exit(1);
     }
 
-    // Ensure Directories Exist
-    for (let d in config.DIRS) {
-        if (!fs.existsSync(config.DIRS[d])) {
-            try {
-                fs.mkdirSync(config.DIRS[d], { recursive: true });
-            } catch (err) {
-                console.error(err);
+    return config
+}
+
+function load_config_multiteam(config) {
+
+    // Expand Directories
+    config.DIRS = expand_directories(config.DIRS)
+
+    // Team Deck API
+    config.DECK = {}
+
+    // extract NC_SERVER from config.TEAM_DECKS for each TEAM
+    for (let t in config.TEAM_DECKS) {
+        config.DECK[t] = {};
+        config.DECK[t].SEARCH_REPLACE = {};
+    
+        // Extract values
+        const matchServer = config.TEAM_DECKS[t].match(/https?:\/\/([^\/]+)/);
+        const matchBoard = config.TEAM_DECKS[t].match(/board\/(\d+)/);
+        const matchProto = config.TEAM_DECKS[t].match(/https?:/);
+    
+        config.DECK[t].SEARCH_REPLACE.NC_SERVER = matchServer?.[1] || "";
+        config.DECK[t].SEARCH_REPLACE.BOARD_ID = matchBoard?.[1] || "";
+        config.DECK[t].SEARCH_REPLACE.HTPROTOCOL = (matchProto?.[0] || "").replace(":", "");
+    
+        config.DECK[t].QUERIES = {};
+    
+        for (let q in config.QUERIES) {
+            let replaced = config.QUERIES[q];
+            for (let sr in config.DECK[t].SEARCH_REPLACE) {
+                const re = new RegExp(sr, "g");
+                replaced = replaced.replace(re, config.DECK[t].SEARCH_REPLACE[sr]);
             }
+            config.DECK[t].QUERIES[q] = replaced;
         }
     }
+
+    // Team Queries
+    return config;
+}
+
+
+
+
+function load_config_default(config) {
+
+    // Expand Directories
+    config.DIRS = expand_directories(config.DIRS)
 
     // Deck API
     config.DECK = {}
@@ -144,6 +180,41 @@ function load_config() {
     // config.host.ips.push('127.0.0.1');
 
     return config;
+}
+
+function expand_directories(dirs) {
+    // Expand Data Directory
+    let search_replace = {}
+    search_replace['DIRNAME'] = __dirname
+    for (let d in dirs) {
+        search_replace[d.toUpperCase()] = d
+    }
+
+    for (let d in dirs) {
+        for (let s in search_replace) {
+            switch (s) {
+                case 'DIRNAME':
+                dirs[d] = path.join(dirs[d].replace(s, __dirname))
+                break
+                default:
+                dirs[d] = path.join(dirs[d].replace(s, dirs[search_replace[s]]))
+                break
+            }
+        }
+    }
+
+    // Ensure Directories Exist
+    for (let d in dirs) {
+        if (!fs.existsSync(dirs[d])) {
+            try {
+                fs.mkdirSync(dirs[d], { recursive: true });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    }
+
+    return dirs
 }
 
 

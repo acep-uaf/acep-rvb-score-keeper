@@ -1,0 +1,30 @@
+{
+    "NAME": "rvb-rnd1",
+    "DESCRIPTION": "Red vs Blue: Round 1",
+    "TYPE":"MULTI-TEAM",
+    "TEAM_DECKS": {
+        "TEAM0":"https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/7",
+        "TEAM1":"https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/12"
+    },
+    "TEAMS": {
+        "TEAM0": {
+            "NAME": "Team 0",
+            "DESCRIPTION": "Team 0",
+            "COLOR": "#FF0000"
+        },
+        "TEAM1": {
+            "NAME": "Team 1",
+            "DESCRIPTION": "Team 1",
+            "COLOR": "#0000FF"
+        }
+    },
+    "START_TS": "2025-06-23T08:00:00 AKDT",
+    "END_TS": "2025-06-27T12:00:00 AKDT",
+    "ENABLED": true,
+    "IGNORE_SSL_VALIDATION": true,
+    "INCLUDES" : [
+        "config.json",
+        "api.json",
+        "../secrets/credentials.json"
+    ]
+}

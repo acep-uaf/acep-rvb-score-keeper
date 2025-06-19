@@ -3,24 +3,28 @@
 // https://github.com/acep-uaf/acep-rvb-score-keeper
 // index.js
 
-import fs from 'fs';
+import fs, { cp } from 'fs';
 import path from 'path';
 import { load_config, logger } from './libs/arsk-lib.js';
 import https from 'https';
 import fetch from 'node-fetch';
 import mqtt from 'mqtt';
+import { log } from 'console';
 
 let config = load_config();
 
 // console.log(JSON.stringify(config, null, 2));
 
+logger("################################################################################")
 logger(`Starting ACEP Red vs Blue Score Keeper`, true);
 logger(`For: ${config.NAME}`, true);
+logger(`  Description: ${config.DESCRIPTION}`, true);
 
 // Log Config without config.SECRETS but without deleting it.
 let logconf = { ...config };
 delete logconf.SECRETS;
 logger(`Config: ${JSON.stringify(logconf, null, 2)}`);
+logger("===============================================================================")
 
 // try {
 //     const logconf = config
@@ -30,91 +34,122 @@ logger(`Config: ${JSON.stringify(logconf, null, 2)}`);
 //     console.error(err);
 // }
 
-// console.log(JSON.stringify(config, null, 2));
 
-// Query Deck
-let username = config.SECRETS[config.DECK.NC_SERVER].USERNAME;
-let password = config.SECRETS[config.DECK.NC_SERVER].PASSWORD;
 
-// Query METADATA from config.QUERIES.METADATA URL with login from config.SECRETS.[config.DECK.NC_SERVER].USERNAME and config.SECRETS.[config.DECK.NC_SERVER].PASSWORD via HTAUTH
+// Query Decks for each team
 
 let metadata = {};
-
-let url = config.QUERIES.METADATA;
-
-// Build fetch options
-let fetchOptions = {
-    method: 'GET',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-    }
-};
-
-// Conditionally ignore SSL validation
-if (config.DECK.HTPROTOCOL === 'https' && config.IGNORE_SSL_VALIDATION) {
-    fetchOptions.agent = new https.Agent({
-        rejectUnauthorized: false
-    });
-}
-
-// Perform the request
-logger(`Fetching ${url}`);
-let response = await fetch(url, fetchOptions);
-
-if (response.ok) {
-    metadata = await response.json();
-} else {
-    logger(`Error: ${response.status} ${response.statusText}`, true);
-}
-
-logger(`Metadata: ${JSON.stringify(metadata, null, 2)}`);
-
-
-// Query STACKS
-
 let stacks = {};
 
-url = config.QUERIES.STACKS;
+for (let t in config.TEAM_DECKS) {
+    metadata[t] = {};
+    stacks[t] = {};
 
-// Build fetch options
-fetchOptions = {
-    method: 'GET',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+
+    let username = config.SECRETS[config.DECK[t].SEARCH_REPLACE.NC_SERVER].USERNAME;
+    let password = config.SECRETS[config.DECK[t].SEARCH_REPLACE.NC_SERVER].PASSWORD;
+
+    // Query METADATA
+    let url = config.DECK[t].QUERIES.METADATA;
+
+    // Build fetch options
+    let fetchOptions = {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+        }
+    };
+
+    // Conditionally ignore SSL validation
+    if (config.DECK[t].SEARCH_REPLACE.HTPROTOCOL === 'https' && config.IGNORE_SSL_VALIDATION) {
+        fetchOptions.agent = new https.Agent({
+            rejectUnauthorized: false
+        });
     }
-};
 
-// Conditionally ignore SSL validation
-if (config.DECK.HTPROTOCOL === 'https' && config.IGNORE_SSL_VALIDATION) {
-    fetchOptions.agent = new https.Agent({
-        rejectUnauthorized: false
-    });
+    // Perform the request
+    logger(`Fetching ${url}`);
+    let response = await fetch(url, fetchOptions);
+
+    if (response.ok) {
+        metadata[t] = await response.json();
+    } else {
+        logger(`Error: ${response.status} ${response.statusText}`, true);
+    }
+
+    // logger(`Metadata: ${JSON.stringify(metadata, null, 2)}`);
+
+    // Query STACKS
+    url = config.DECK[t].QUERIES.STACKS;
+
+    // Build fetch options
+    fetchOptions = {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+        }
+    }
+
+    // Conditionally ignore SSL validation
+    if (config.DECK[t].SEARCH_REPLACE.HTPROTOCOL === 'https' && config.IGNORE_SSL_VALIDATION) {
+        fetchOptions.agent = new https.Agent({
+            rejectUnauthorized: false
+        });
+    }
+
+    // Perform the request
+    logger(`Fetching ${url}`);
+    response = await fetch(url, fetchOptions);
+
+    if (response.ok) {
+        stacks[t] = await response.json();
+    } else {
+        logger(`Error: ${response.status} ${response.statusText}`, true);
+    }
+
+    // logger(`Stacks: ${JSON.stringify(stacks, null, 2)}`);
 }
-
-// Perform the request
-logger(`Fetching ${url}`);
-response = await fetch(url, fetchOptions);
-
-if (response.ok) {
-    stacks = await response.json();
-} else {
-    logger(`Error: ${response.status} ${response.statusText}`, true);
-}
-
-logger(`Stacks: ${JSON.stringify(stacks, null, 2)}`);
-
 
 // Aggregate Metadata and Stacks for Scoring
 
 let competition = {};
+
 competition.NAME = config.NAME;
 competition.TITLE = metadata.title;
 competition.DESCRIPTION = config.DESCRIPTION;
+// competition.COLOR = '#000000'
 competition.START = config.START_TS;
 competition.END = config.END_TS;
-competition.ENABLED = config.ENABLED;
+competition.STATUS = "";
+// competition.ENABLED = config.ENABLED;
+competition.ARCHIVED = false;
+competition.TOTAL_POINTS = 0;
+competition.ASSIGNED_POINTS = 0;
+competition.AWARDED_POINTS = 0;
+competition.POINTS = {};
+competition.POINTSMAP = {};
+competition.LABELS = {};
+competition.PEOPLE = {};
+competition.ROLES = {};
+// competition.PERMISSIONS = {};
+competition.MODERATORS = [];
+competition.TEAMS = {};
+competition.SCORES = {}
+competition.SCORES.TOTALS = {}
+competition.SCORES.TEAMS = {}
+competition.SCORES.PLAYERS = {}
+
+
+for (let t in config.TEAM_DECKS) {
+    competition.TEAMS[t] =  {}
+    competition.TEAMS[t].NAME = config.TEAMS[t].NAME,
+    competition.TEAMS[t].PLAYERS = [],
+    competition.TEAMS[t].BOARD = config.TEAM_DECKS[t]
+}
+
+
 
 // If the competition has not started, set the status to "PENDING"
 // If the competition has ended, set the status to "COMPLETED"
@@ -131,116 +166,126 @@ if (now < config.START_TS) {
     competition.STATUS = "ACTIVE";
 }
 
-competition.OWNER = metadata.owner.primaryKey;
-competition.TOTAL_POINTS = 0;
-competition.ASSIGNED_POINTS = 0;
-competition.AWARDED_POINTS = 0;
 
+for (let t in metadata) {
+    competition.TEAMS[t].COLOR = metadata[t].color;
+    competition.TEAMS[t].ARCHIVED = metadata[t].archived;
+    competition.TEAMS[t].PERMISSIONS = {};
 
-competition.scores = {}
-competition.labels = {}
-for (let l in metadata.labels) {
-    let score = null;
-    if (score = metadata.labels[l].title.match(/^([0-9])+ pt$/)) {
-        competition.scores[metadata.labels[l].title] = {
-            title: metadata.labels[l].title,
-            points: parseInt(score[1]),
-            color: metadata.labels[l].color
+    // Points and Labels
+    for (let l in metadata[t].labels) {
+        let label = metadata[t].labels[l].title.match(/^([0-9])+ pt$/)
+        if (label) {
+            let points = label[1]
+            competition.POINTS[points] = {}
+            competition.POINTS[points]['title'] =  metadata[t].labels[l].title
+            competition.POINTS[points]['points'] = points
+            competition.POINTS[points]['color'] = metadata[t].labels[l].color
+            competition.POINTSMAP[metadata[t].labels[l].title] = points
+        } else {
+            competition.LABELS[metadata[t].labels[l].title] = {}
+            competition.LABELS[metadata[t].labels[l].title]['title'] =  metadata[t].labels[l].title
+            competition.LABELS[metadata[t].labels[l].title]['color'] = metadata[t].labels[l].color
         }
-    } else {
-        competition.labels[metadata.labels[l].title] = {
-            title: metadata.labels[l].title,
-            color: metadata.labels[l].color
-        }
+    }    
+
+    // Permissions
+    for (let p in metadata[t].permissions) {
+        // e.g. p = 'PERMISSION_READ' convert to ACL format 'permissionRead'
+        let permparts = p.split('_')
+        let permission = permparts[0].toLocaleLowerCase() + permparts[1].charAt(0).toUpperCase() + permparts[1].slice(1).toLocaleLowerCase();
+        competition.TEAMS[t].PERMISSIONS[permission] = []
     }
-}
+    for (let p in metadata[t].acl) {
+        let userpkey = metadata[t].acl[p].participant.primaryKey
 
-competition.permissions = metadata.permissions
-
-competition.people = {}
-competition.roles = {}
-competition.roles.owner = []
-competition.roles.moderators = []
-competition.roles.players = []
-
-for (let p in metadata.users) {
-    competition.people[metadata.users[p].primaryKey] = {}
-    competition.people[metadata.users[p].primaryKey].NAME = metadata.users[p].displayname;
-
-    if (metadata.users[p].primaryKey == competition.OWNER) {
-        competition.roles.owner.push(metadata.users[p].primaryKey);
-        competition.roles.moderators.push(metadata.users[p].primaryKey);
-     } else {
-        competition.roles.players.push(metadata.users[p].primaryKey);
-     }  
-}
-
-
-competition.stacks = {}
-for (let s in metadata.stacks) {
-    competition.stacks[metadata.stacks[s].title] = {
-        id: metadata.stacks[s].id,
-        title: metadata.stacks[s].title,
-        points_total: 0,
-        points_assigned: {}
-    }
-
-    for (let p in competition.roles.players) {
-        competition.stacks[metadata.stacks[s].title].points_assigned[competition.roles.players[p]] = 0
-    }
-}
-
-
-for (let s in stacks) {
-    let stack = stacks[s].title
-
-    for (let c in stacks[s].cards) {
-        let card = stacks[s].cards[c]
-
-        // Get Points
-        for (let l in card.labels) {
-            // console.log(JSON.stringify(competition.scores, null, 2))
-            // console.log(`DEBUG: ${card.labels[l].title}`)
-
-            // If card.labels[l].title is in Object.keys(competition.scores
-            if (competition.scores.hasOwnProperty(card.labels[l].title)) {
-                // console.log(`DEBUG MATCH: ${card.labels[l].title}`)
-                competition.TOTAL_POINTS += competition.scores[card.labels[l].title].points
-                competition.stacks[stack].points_total += competition.scores[card.labels[l].title].points
+        for (let k in metadata[t].acl[p]) {
+            if (k.match(RegExp('^permission')) && metadata[t].acl[p][k] == true) {
+                competition.TEAMS[t].PERMISSIONS[k].push(userpkey)
             }
+        }
+    }
 
-            // Get Card Owners
-            // console.log(JSON.stringify(competition.roles.players, null, 2))
-            // console.log(JSON.stringify(card.assignedUsers, null, 2))
-            // console.log(JSON.stringify(competition, null, 2))
-            for (let o in card.assignedUsers) {
-                // competition.roles.players is an array.
-                // console.log("DEBUG: " + card.labels[l].title)
-                if (competition.scores.hasOwnProperty(card.labels[l].title)) {
-                    if (competition.roles.players.includes(card.assignedUsers[o].participant.primaryKey)) {
-                        competition.ASSIGNED_POINTS += competition.scores[card.labels[l].title].points
-                        if (stack == "Awarded") {
-                            competition.AWARDED_POINTS += competition.scores[card.labels[l].title].points
-                        }
-                        competition.stacks[stack].points_assigned[card.assignedUsers[o].participant.primaryKey] += competition.scores[card.labels[l].title].points
-                    }    
+    // People
+    for (let u in metadata[t].users) {
+        competition.PEOPLE[metadata[t].users[u].primaryKey] = {}
+        competition.PEOPLE[metadata[t].users[u].primaryKey]['NAME'] = metadata[t].users[u].displayname
+
+        if (metadata[t].owner.primaryKey == metadata[t].users[u].primaryKey && ! competition.MODERATORS.includes(metadata[t].users[u].primaryKey) ) {
+            competition.MODERATORS.push(metadata[t].users[u].primaryKey)
+        } else if (competition.TEAMS[t].PERMISSIONS['permissionManage'].includes(metadata[t].users[u].primaryKey) || competition.TEAMS[t].PERMISSIONS['permissionShare'].includes(metadata[t].users[u].primaryKey)) {
+            if (! competition.MODERATORS.includes(metadata[t].users[u].primaryKey)) {
+                competition.MODERATORS.push(metadata[t].users[u].primaryKey)
+            }
+        } else { // Player
+            if (! competition.MODERATORS.includes(metadata[t].users[u].primaryKey)) {
+                competition.TEAMS[t].PLAYERS.push(metadata[t].users[u].primaryKey)                
+            }
+        }
+    }
+}
+
+// Get Stack Point Data Structure
+for (let t in stacks) { // Teams
+    for (let s in stacks[t]) { // Stacks
+        competition.SCORES.TOTALS[stacks[t][s].title] = 0
+    }
+}
+
+
+for (let t in stacks) { // Teams
+    // competition.SCORES.TEAMS[t] = {}
+
+    for (let s in stacks[t]) { // Stacks
+        // competition.SCORES.TEAMS[t][stacks[t][s].title] = 0
+        if (! competition.SCORES.TEAMS.hasOwnProperty(s)) {
+            competition.SCORES.TEAMS[s] = {}
+        }
+        competition.SCORES.TEAMS[s][t] = 0
+
+        if (! competition.SCORES.PLAYERS.hasOwnProperty(stacks[t][s].title)) {
+            competition.SCORES.PLAYERS[stacks[t][s].title] = {}
+        }
+        for (let p in competition.TEAMS[t].PLAYERS) {
+            competition.SCORES.PLAYERS[stacks[t][s].title][competition.TEAMS[t].PLAYERS[p]] = 0     
+        }
+
+        for (let c in stacks[t][s].cards) { // Cards
+            for (let l in stacks[t][s].cards[c].labels) { // Labels
+                // logger(`DEBUG: TEAM: ${t}, STACK: ${s}, CARD: ${c}, LABEL: ${stacks[t][s].cards[c].labels[l]['title']}`)
+                if (competition.POINTSMAP.hasOwnProperty(stacks[t][s].cards[c].labels[l]['title'])) {
+                    competition.SCORES.TOTALS[stacks[t][s].title] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+                    // competition.SCORES.TEAMS[t][stacks[t][s].title] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+                    competition.SCORES.TEAMS[s][t] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+
+                    // Players
+                    for (let a in stacks[t][s].cards[c].assignedUsers) {
+                        let player = stacks[t][s].cards[c].assignedUsers[a].participant.primaryKey
+                        competition.SCORES.PLAYERS[stacks[t][s].title][player] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+                    }
                 }
             }
-
         }
     }
 }
 
-logger(`Competition: ${JSON.stringify(competition, null, 2)}`, false);
 
-printPointsTable(competition.stacks);
+
+// logger(`Metadata: ${JSON.stringify(metadata, null, 2)}`)
+// logger(`Stacks: ${JSON.stringify(stacks, null, 2)}`)
+logger(`Competition: ${JSON.stringify(competition, null, 2)}`);
+
+
+// printPointsTable(competition.stacks);
 
 // Write to file
 try {
     fs.writeFileSync(path.join(config.DIRS.DATA,`${config.NAME}.json`), JSON.stringify(competition, null, 2));
+    logger(`WROTE: ${path.join(config.DIRS.DATA,`${config.NAME}.json`)}`);
 } catch (err) {
     logger(`Error: ${err}`, true);
 }
+
 
 // Publish to MQTT Broker
 // Construct MQTT URL
@@ -259,7 +304,7 @@ const mqttClient = mqtt.connect(mqttUrl, {
 mqttClient.on('connect', () => {
     logger(`Connected to MQTT at ${mqttUrl}`, false);
   
-    mqttClient.publish(topic, JSON.stringify(competition), { qos: 1, retain: true }, (err) => {
+    mqttClient.publish(topic, JSON.stringify(competition, null, 2), { qos: 1, retain: true }, (err) => {
       if (err) {
         logger(`MQTT publish error: ${err.message}`, true);
       } else {

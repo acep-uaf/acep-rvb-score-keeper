@@ -3,7 +3,7 @@
     "DESCRIPTION": "Red vs Blue Quests",
     "NC_DECK_BOARD_URL": "https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/2",
     "START_TS": "2025-05-27T00:00:00.000Z",
-    "END_TS": "2025-06-14T23:59:59.999Z",
+    "END_TS": "2025-06-20T23:59:59.999Z",
     "ENABLED": true,
     "IGNORE_SSL_VALIDATION": true,
     "INCLUDES" : [
