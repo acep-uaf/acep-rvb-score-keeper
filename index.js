@@ -125,21 +125,28 @@ competition.END = config.END_TS;
 competition.STATUS = "";
 // competition.ENABLED = config.ENABLED;
 competition.ARCHIVED = false;
-competition.TOTAL_POINTS = 0;
-competition.ASSIGNED_POINTS = 0;
-competition.AWARDED_POINTS = 0;
+// competition.TOTAL_POINTS = 0;
+// competition.ASSIGNED_POINTS = 0;
+// competition.AWARDED_POINTS = 0;
 competition.POINTS = {};
 competition.POINTSMAP = {};
+competition.STACKSLIST = [];
+competition.AWARDSTACK = '';
 competition.LABELS = {};
 competition.PEOPLE = {};
 competition.ROLES = {};
-// competition.PERMISSIONS = {};
 competition.MODERATORS = [];
 competition.TEAMS = {};
 competition.SCORES = {}
 competition.SCORES.TOTALS = {}
+competition.SCORES.TOTALS.SUMMARY = {}
+competition.SCORES.TOTALS.BYTYPE = {}
 competition.SCORES.TEAMS = {}
+competition.SCORES.TEAMS.SUMMARY = {}
+competition.SCORES.TEAMS.BYTYPE = {}
 competition.SCORES.PLAYERS = {}
+competition.SCORES.PLAYERS.SUMMARY = {}
+competition.SCORES.PLAYERS.BYTYPE = {}
 
 
 for (let t in config.TEAM_DECKS) {
@@ -189,6 +196,8 @@ for (let t in metadata) {
         }
     }    
 
+    // Detect the 
+
     // Permissions
     for (let p in metadata[t].permissions) {
         // e.g. p = 'PERMISSION_READ' convert to ACL format 'permissionRead'
@@ -225,43 +234,119 @@ for (let t in metadata) {
     }
 }
 
-// Get Stack Point Data Structure
-for (let t in stacks) { // Teams
-    for (let s in stacks[t]) { // Stacks
-        competition.SCORES.TOTALS[stacks[t][s].title] = 0
+for (let t in stacks) {
+    for (let s in stacks[t]) {
+        if (! competition.STACKSLIST.includes(stacks[t][s].title)) {
+            competition.STACKSLIST.push(stacks[t][s].title)
+        }
     }
 }
 
+// Set last STACKLIST to AWARD STACK
+if (competition.STACKSLIST.length > 0) {
+    competition.AWARDSTACK = competition.STACKSLIST[competition.STACKSLIST.length - 1]
+}
 
+// Score Keeping
 for (let t in stacks) { // Teams
-    // competition.SCORES.TEAMS[t] = {}
+    let team = t
+    // competition.SCORES.TEAMS[team] = {}
 
-    for (let s in stacks[t]) { // Stacks
-        // competition.SCORES.TEAMS[t][stacks[t][s].title] = 0
-        if (! competition.SCORES.TEAMS.hasOwnProperty(stacks[t][s].title)) {
-            competition.SCORES.TEAMS[ stacks[t][s].title ] = {}
-        }
-        competition.SCORES.TEAMS[ stacks[t][s].title ][t] = 0
+    for (let s in stacks[team]) { // Stacks
+        let stack = stacks[team][s].title
 
-        if (! competition.SCORES.PLAYERS.hasOwnProperty(stacks[t][s].title)) {
-            competition.SCORES.PLAYERS[stacks[t][s].title] = {}
-        }
-        for (let p in competition.TEAMS[t].PLAYERS) {
-            competition.SCORES.PLAYERS[stacks[t][s].title][competition.TEAMS[t].PLAYERS[p]] = 0     
+        // Summary
+        if (! competition.SCORES.TOTALS.SUMMARY.hasOwnProperty(stack)) {
+            competition.SCORES.TOTALS.SUMMARY[stack] = 0
         }
 
-        for (let c in stacks[t][s].cards) { // Cards
-            for (let l in stacks[t][s].cards[c].labels) { // Labels
-                // logger(`DEBUG: TEAM: ${t}, STACK: ${s}, CARD: ${c}, LABEL: ${stacks[t][s].cards[c].labels[l]['title']}`)
-                if (competition.POINTSMAP.hasOwnProperty(stacks[t][s].cards[c].labels[l]['title'])) {
-                    competition.SCORES.TOTALS[stacks[t][s].title] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
-                    // competition.SCORES.TEAMS[t][stacks[t][s].title] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
-                    competition.SCORES.TEAMS[stacks[t][s].title][t] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+        // Initialize By Type
+        for (let tp in competition.LABELS) {
+            if (! competition.SCORES.TOTALS.BYTYPE.hasOwnProperty(tp)) {
+                competition.SCORES.TOTALS.BYTYPE[tp] = 0
+            }
+        }
 
-                    // Players
-                    for (let a in stacks[t][s].cards[c].assignedUsers) {
-                        let player = stacks[t][s].cards[c].assignedUsers[a].participant.primaryKey
-                        competition.SCORES.PLAYERS[stacks[t][s].title][player] += Number(competition.POINTSMAP[stacks[t][s].cards[c].labels[l]['title']])
+        // By Team
+        if (! competition.SCORES.TEAMS.SUMMARY.hasOwnProperty(stack)) {
+            competition.SCORES.TEAMS.SUMMARY[ stack ] = {}
+        }
+        competition.SCORES.TEAMS.SUMMARY[ stack ][team] = 0
+
+        // Initialize By Type
+        for (let tp in competition.LABELS) {
+            if (! competition.SCORES.TEAMS.BYTYPE.hasOwnProperty(tp)) {
+                competition.SCORES.TEAMS.BYTYPE[tp] = {}
+            }
+            if (! competition.SCORES.TEAMS.BYTYPE[tp].hasOwnProperty(team)) {
+                competition.SCORES.TEAMS.BYTYPE[tp][team] = 0
+            }
+
+            // // By Player
+            // if (! competition.SCORES.PLAYERS.BYTYPE.hasOwnProperty(tp)) {
+            //     competition.SCORES.PLAYERS.BYTYPE[tp] = {}
+
+            //     for (let p in competition.TEAMS[team].PLAYERS) {
+            //         competition.SCORES.PLAYERS.BYTYPE[tp][competition.TEAMS[team].PLAYERS[p]] = 0
+            //     }
+            // }
+        }
+
+        // By Player
+        if (! competition.SCORES.PLAYERS.SUMMARY.hasOwnProperty(stack)) {
+            competition.SCORES.PLAYERS.SUMMARY[stack] = {}
+        }
+        for (let p in competition.TEAMS[team].PLAYERS) {
+            competition.SCORES.PLAYERS.SUMMARY[stack][competition.TEAMS[team].PLAYERS[p]] = 0     
+        }
+
+        for (let tp in competition.LABELS) {
+            if (! competition.SCORES.PLAYERS.BYTYPE.hasOwnProperty(tp)) {
+                competition.SCORES.PLAYERS.BYTYPE[tp] = {}
+            }
+
+            for (let p in competition.TEAMS[team].PLAYERS) {
+                competition.SCORES.PLAYERS.BYTYPE[tp][competition.TEAMS[team].PLAYERS[p]] = 0
+            }
+        }
+
+        for (let c in stacks[team][s].cards) { // Cards
+            for (let l in stacks[team][s].cards[c].labels) { // Labels
+                let label = stacks[team][s].cards[c].labels[l]['title']
+                // logger(`DEBUG: TEAM: ${t}, STACK: ${s}, CARD: ${c}, LABEL: ${label}`)
+                if (competition.POINTSMAP.hasOwnProperty(label)) {
+                    // Summary
+                    competition.SCORES.TOTALS.SUMMARY[stack] += Number(competition.POINTSMAP[label])
+
+
+                    // By Team
+                    competition.SCORES.TEAMS.SUMMARY[stack][team] += Number(competition.POINTSMAP[label])
+
+                    // By Players
+                    for (let a in stacks[team][s].cards[c].assignedUsers) {
+                        let player = stacks[team][s].cards[c].assignedUsers[a].participant.primaryKey
+                        competition.SCORES.PLAYERS.SUMMARY[stack][player] += Number(competition.POINTSMAP[label])
+                    }
+
+                    // By Type
+                    if (stack == competition.AWARDSTACK) {
+                        for (let ll in stacks[team][s].cards[c].labels) {
+                            let type = stacks[team][s].cards[c].labels[ll]['title']
+                            if (!competition.POINTSMAP.hasOwnProperty(type)) {
+                                // Summary
+                                competition.SCORES.TOTALS.BYTYPE[type] += Number(competition.POINTSMAP[label])        
+    
+                                // By Team
+                                competition.SCORES.TEAMS.BYTYPE[type][team] += Number(competition.POINTSMAP[label])
+    
+                                // By Players
+                                for (let a in stacks[team][s].cards[c].assignedUsers) {
+                                    let player = stacks[team][s].cards[c].assignedUsers[a].participant.primaryKey
+                                    competition.SCORES.PLAYERS.BYTYPE[type][player] += Number(competition.POINTSMAP[label])
+                                }
+
+                            }
+                        }                            
                     }
                 }
             }
@@ -273,7 +358,7 @@ for (let t in stacks) { // Teams
 
 // logger(`Metadata: ${JSON.stringify(metadata, null, 2)}`)
 // logger(`Stacks: ${JSON.stringify(stacks, null, 2)}`)
-logger(`Competition: ${JSON.stringify(competition, null, 2)}`);
+// logger(`Competition: ${JSON.stringify(competition, null, 2)}`);
 
 
 // printPointsTable(competition.stacks);
