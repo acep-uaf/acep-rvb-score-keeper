@@ -122,6 +122,7 @@ competition.DESCRIPTION = config.DESCRIPTION;
 competition.START = config.START_TS;
 competition.END = config.END_TS;
 competition.STATUS = "";
+competition.ENABLED = config.ENABLED;
 competition.ARCHIVED = false;
 competition.POINTS = {};
 competition.POINTSMAP = {};
@@ -129,7 +130,7 @@ competition.STACKSLIST = [];
 competition.AWARDSTACK = '';
 competition.LABELS = {};
 competition.PEOPLE = {};
-competition.ROLES = {};
+// competition.ROLES = {};
 competition.MODERATORS = [];
 competition.TEAMS = {};
 competition.SCORES = {}
@@ -217,14 +218,24 @@ for (let t in metadata) {
 
         if (metadata[t].owner.primaryKey == metadata[t].users[u].primaryKey && ! competition.MODERATORS.includes(metadata[t].users[u].primaryKey) ) {
             competition.MODERATORS.push(metadata[t].users[u].primaryKey)
+            competition.PEOPLE[metadata[t].users[u].primaryKey]['ROLE'] = 'Moderator'
+            console.log("DEBUG 1" + JSON.stringify(competition.PEOPLE, null, 2))
+
         } else if (competition.TEAMS[t].PERMISSIONS['permissionManage'].includes(metadata[t].users[u].primaryKey) || competition.TEAMS[t].PERMISSIONS['permissionShare'].includes(metadata[t].users[u].primaryKey)) {
             if (! competition.MODERATORS.includes(metadata[t].users[u].primaryKey)) {
                 competition.MODERATORS.push(metadata[t].users[u].primaryKey)
+                competition.PEOPLE[metadata[t].users[u].primaryKey]['ROLE'] = 'Moderator'
             }
+            // console.log("DEBUG 2")
+
         } else { // Player
             if (! competition.MODERATORS.includes(metadata[t].users[u].primaryKey)) {
-                competition.TEAMS[t].PLAYERS.push(metadata[t].users[u].primaryKey)                
+                competition.TEAMS[t].PLAYERS.push(metadata[t].users[u].primaryKey)
+                competition.PEOPLE[metadata[t].users[u].primaryKey]['ROLE'] = 'Player'
+                competition.PEOPLE[metadata[t].users[u].primaryKey]['TEAM_ID'] = t
+                competition.PEOPLE[metadata[t].users[u].primaryKey]['TEAM'] =  competition.TEAMS[t].NAME
             }
+            // console.log("DEBUG 3")
         }
     }
 }

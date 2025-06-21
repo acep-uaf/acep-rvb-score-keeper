@@ -1,7 +1,17 @@
 {
     "NAME": "rvbquests",
     "DESCRIPTION": "Red vs Blue Quests",
-    "NC_DECK_BOARD_URL": "https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/2",
+    "TYPE":"MULTI-TEAM",
+    "TEAM_DECKS": {
+        "TEAM0":"https://rvbshare.acep.uaf.edu/index.php/apps/deck/board/2"
+    },
+    "TEAMS": {
+        "TEAM0": {
+            "NAME": "Team 0",
+            "DESCRIPTION": "Team 0",
+            "COLOR": "#FF0000"
+        }
+    },
     "START_TS": "2025-05-27T00:00:00.000Z",
     "END_TS": "2025-06-20T23:59:59.999Z",
     "ENABLED": true,
